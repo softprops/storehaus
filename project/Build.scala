@@ -132,4 +132,13 @@ object StorehausBuild extends Build {
     name := "storehaus-mysql",
     libraryDependencies += "com.twitter" %% "finagle-mysql" % "6.2.1"
   ).dependsOn(storehausCore % "test->test;compile->compile")
+
+  lazy val storehausZookeeper = Project(
+    id = "storehaus-zookeeper",
+    base = file("storehaus-zookeeper"),
+    settings = sharedSettings
+  ).settings(
+    name := "storehaus-zookeeper",
+    libraryDependencies += "com.twitter" %% "util-zk" % "6.3.0"
+  ).dependsOn(storehausCore % "test->test;compile->compile")
 }
