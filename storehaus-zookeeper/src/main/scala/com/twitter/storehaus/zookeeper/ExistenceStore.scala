@@ -35,9 +35,11 @@ class ExistenceStore(val client: ZkClient)
 
   override def get(k: String): Future[Option[Stat]] =
     client(k).sync.flatMap { node =>
-      node.exists().map(e => Option(e.stat)).handle({
+      node.exists().map {
+        case ZNode.Exists(path, stat) => Option(stat)
+      }.handle {
         case ZNode.Error(_) => None
-      })
+      }
     }
 
   override def close { client.release }

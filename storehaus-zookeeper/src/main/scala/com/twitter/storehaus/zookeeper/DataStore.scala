@@ -18,7 +18,7 @@ package com.twitter.storehaus.zookeeper
 
 import com.twitter.util.Future
 import com.twitter.storehaus.Store
-import com.twitter.zk.ZkClient
+import com.twitter.zk.{ ZkClient, ZNode }
 import org.apache.zookeeper.data.Stat
 
 /**
@@ -36,8 +36,9 @@ class DataStore(val client: ZkClient)
   override def get(k: String): Future[Option[(Stat, Array[Byte])]] =
     client(k).sync.flatMap { node =>
       node.getData().map {
-        case data =>
-          Some((data.stat, data.bytes))
+        case ZNode.Data(path, stat, bytes) => Some((stat, bytes))
+      }.handle {
+        case ZNode.Error(_) => None
       }
     }
 
@@ -48,8 +49,8 @@ class DataStore(val client: ZkClient)
       case (key, None) =>
         client(key).sync.flatMap { node =>
           node.getData().map {
-            case data =>
-              node.delete(data.stat.getVersion)
+            case ZNode.Data(path, stat, bytes) =>
+              node.delete(stat.getVersion)
           }          
         }.unit
     }

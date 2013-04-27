@@ -18,7 +18,7 @@ package com.twitter.storehaus.zookeeper
 
 import com.twitter.util.Future
 import com.twitter.storehaus.Store
-import com.twitter.zk.ZkClient
+import com.twitter.zk.{ ZkClient, ZNode }
 import org.apache.zookeeper.data.Stat
 
 /**
@@ -35,7 +35,12 @@ class ChildrenStore(val client: ZkClient)
 
   override def get(k: String): Future[Option[Seq[String]]] =
     client(k).sync.flatMap {
-      _.getChildren().map(cx => Some(cx.children.map(_.path)))
+      _.getChildren().map {
+        case ZNode.Children(path, stat, children) =>
+          Some(children.map(_.path))
+      }.handle({
+        case ZNode.Error(_) => None
+      })
     }
 
   override def put(kv: (String, Option[Seq[String]])): Future[Unit] =
