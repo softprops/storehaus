@@ -36,7 +36,7 @@ class DataStore(val client: ZkClient)
   override def get(k: String): Future[Option[(Stat, Array[Byte])]] =
     client(k).sync.flatMap { node =>
       node.getData().map {
-        case ZNode.Data(path, stat, bytes) => Some((stat, bytes))
+        case ZNode.Data(_, stat, bytes) => Some((stat, bytes))
       }.handle {
         case ZNode.Error(_) => None
       }
@@ -48,10 +48,10 @@ class DataStore(val client: ZkClient)
         client(key).sync.map { _(value._1, value._2) }.unit
       case (key, None) =>
         client(key).sync.flatMap { node =>
-          node.getData().map {
-            case ZNode.Data(path, stat, bytes) =>
+          node.exists().map {
+            case ZNode.Exists(path, stat) =>
               node.delete(stat.getVersion)
-          }          
+          }
         }.unit
     }
 
