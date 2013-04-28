@@ -36,7 +36,7 @@ class ChildrenStore(val client: ZkClient)
   override def get(k: String): Future[Option[Seq[String]]] =
     client(k).sync.flatMap {
       _.getChildren().map {
-        case ZNode.Children(path, stat, children) =>
+        case ZNode.Children(_, _, children) =>
           Some(children.map(_.path))
       }.handle({
         case ZNode.Error(_) => None
@@ -50,7 +50,7 @@ class ChildrenStore(val client: ZkClient)
           _.exists().map(_(children))
         }.unit
       case (path, None) =>
-        // TODO: delete children
+        // TODO: how to delete children
         Future.value(Nil)
     }
 
