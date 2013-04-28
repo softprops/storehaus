@@ -20,6 +20,7 @@ import com.twitter.util.Future
 import com.twitter.storehaus.Store
 import com.twitter.zk.{ ZkClient, ZNode }
 import org.apache.zookeeper.data.Stat
+import org.apache.zookeeper.KeeperException
 
 /**
  *  @author Doug Tangren
@@ -31,26 +32,36 @@ object DataStore {
 }
 
 class DataStore(val client: ZkClient)
-  extends Store[String, (Stat, Array[Byte])] {
+  extends Store[String, Array[Byte]] {
 
-  override def get(k: String): Future[Option[(Stat, Array[Byte])]] =
+  override def get(k: String): Future[Option[Array[Byte]]] =
     client(k).sync.flatMap { node =>
       node.getData().map {
-        case ZNode.Data(_, stat, bytes) => Some((stat, bytes))
+        case ZNode.Data(_, _, bytes) => Some(bytes)
       }.handle {
         case ZNode.Error(_) => None
       }
     }
 
-  override def put(kv: (String, Option[(Stat, Array[Byte])])): Future[Unit] =
+  override def put(kv: (String, Option[Array[Byte]])): Future[Unit] =
     kv match {
       case (key, Some(value)) =>
-        client(key).sync.map { _(value._1, value._2) }.unit
+        client(key).create(value).unit.handle {
+          case e: KeeperException.InvalidACLException =>
+            () // what to do with invalid acl exception
+          case e @ ZNode.Error(path) =>
+            () // todo: what todo in other failure cases
+        }
       case (key, None) =>
         client(key).sync.flatMap { node =>
           node.exists().map {
             case ZNode.Exists(path, stat) =>
               node.delete(stat.getVersion)
+          }.handle {
+            case e: KeeperException.NoNodeException =>
+              () // todo: what todo when node does not exist
+            case e @ ZNode.Error(path) =>
+              () // todo: what to do in other failure cases
           }
         }.unit
     }
