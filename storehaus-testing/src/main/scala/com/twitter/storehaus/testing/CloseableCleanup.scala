@@ -14,32 +14,12 @@
  * limitations under the License.
  */
 
-package com.twitter.storehaus.redis
+package com.twitter.storehaus.testing
 
-import java.io.Closeable
-import scala.collection.mutable.{ HashSet, SynchronizedSet }
+import com.twitter.util.Closable
 
-// TODO: this should get moved into a common test module 
-trait Cleanup {
-  Cleanup.instances += this
-  def cleanup()
-}
-
-trait CloseableCleanup[C <: Closeable] extends Cleanup {
+/** Cleanup for Closeable types */
+trait CloseableCleanup[C <: Closable] extends Cleanup {
   def closeable: C
-  def cleanup() {
-    closeable.close()
-  }
-}
-
-object Cleanup {
-  private val instances = new HashSet[Cleanup] with SynchronizedSet[Cleanup]
-  def cleanup() {
-    try instances.foreach { _.cleanup() }
-    catch {
-      case e: Exception =>
-        println("Error on cleanup")
-        e.printStackTrace
-    }
-  }
+  def cleanup() = closeable.close()
 }

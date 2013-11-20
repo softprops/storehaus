@@ -16,7 +16,7 @@
 
 package com.twitter.storehaus.redis
 
-import com.twitter.util.{ Future, Time }
+import com.twitter.util.{ Duration, Future, Time }
 import com.twitter.finagle.redis.Client
 import com.twitter.storehaus.Store
 import org.jboss.netty.buffer.ChannelBuffer
@@ -27,16 +27,16 @@ import org.jboss.netty.buffer.ChannelBuffer
  */
 
 object RedisSetStore {
-  def apply(client: Client, ttl: Option[Time] = RedisStore.Default.TTL) =
+  def apply(client: Client, ttl: Option[Duration] = RedisStore.Default.TTL) =
     new RedisSetStore(client, ttl)
-  def members(client: Client, ttl: Option[Time] = RedisStore.Default.TTL) =
+  def members(client: Client, ttl: Option[Duration] = RedisStore.Default.TTL) =
     new RedisSetMembershipStore(RedisSetStore(client, ttl))
 }
 
 /**
  * A Store for sets of values backed by a Redis set.
  */
-class RedisSetStore(val client: Client, ttl: Option[Time])
+class RedisSetStore(val client: Client, ttl: Option[Duration])
   extends Store[ChannelBuffer, Set[ChannelBuffer]] {
 
   override def get(k: ChannelBuffer): Future[Option[Set[ChannelBuffer]]] =
@@ -66,6 +66,8 @@ class RedisSetStore(val client: Client, ttl: Option[Time])
 
   protected [redis] def delete(k: ChannelBuffer, v: List[ChannelBuffer]) =
     client.sRem(k, v).unit
+
+  override def close(t: Time) = client.quit.foreach { _ => client.release }
 }
 
 /**
@@ -116,5 +118,5 @@ class RedisSetMembershipStore(store: RedisSetStore)
   /** Calling close on this store will also close it's underlying
    *  RedisSetStore
    */
-  override def close { store.close }
+  override def close(t: Time) = store.close(t)
 }

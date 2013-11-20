@@ -18,8 +18,6 @@ package com.twitter.storehaus.mysql
 
 import java.lang.UnsupportedOperationException
 
-import scala.util.control.Exception.allCatch
-
 import com.twitter.bijection.Injection
 import com.twitter.finagle.exp.mysql.{
   EmptyValue,
@@ -36,6 +34,7 @@ import com.twitter.finagle.exp.mysql.{
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.util.CharsetUtil.UTF_8
+import scala.util.Try
 
 /** Helper class for mapping finagle-mysql Values to types we care about. */
 object ValueMapper {
@@ -82,6 +81,10 @@ object ValueMapper {
       case _ => throw new UnsupportedOperationException(v.getClass.getName + " is currently not supported.")
     }
   }
+
+  def toLong(v: Value): Option[Long] = {
+    toString(v).map { _.toLong }
+  }
 }
 
 /** Factory for [[com.twitter.storehaus.mysql.MySqlValue]] instances. */
@@ -123,7 +126,7 @@ class MySqlValue(val v: Value) {
  */
 object MySqlStringInjection extends Injection[MySqlValue, String] {
   def apply(a: MySqlValue): String = ValueMapper.toString(a.v).getOrElse("") // should this be null: String instead?
-  def invert(b: String): Option[MySqlValue] = allCatch.opt(MySqlValue(RawStringValue(b)))
+  override def invert(b: String) = Try(MySqlValue(RawStringValue(b)))
 }
 
 /**
@@ -133,5 +136,10 @@ object MySqlStringInjection extends Injection[MySqlValue, String] {
  */
 object MySqlCbInjection extends Injection[MySqlValue, ChannelBuffer] {
   def apply(a: MySqlValue): ChannelBuffer = ValueMapper.toChannelBuffer(a.v).getOrElse(ChannelBuffers.EMPTY_BUFFER)
-  def invert(b: ChannelBuffer): Option[MySqlValue] = allCatch.opt(MySqlValue(RawStringValue(b.toString(UTF_8))))
+  override def invert(b: ChannelBuffer) = Try(MySqlValue(RawStringValue(b.toString(UTF_8))))
+}
+
+object LongMySqlInjection extends Injection[Long, MySqlValue] {
+  def apply(a: Long): MySqlValue = MySqlValue(a)
+  override def invert(b: MySqlValue) = Try(ValueMapper.toLong(b.v).get)
 }

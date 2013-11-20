@@ -13,22 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.twitter.storehaus.dynamodb
 
-package com.twitter.storehaus.redis
+import java.util.{ Map => JMap }
 
-import org.scalacheck.Gen
+import com.twitter.storehaus.ConvertedStore
 
-object Generators {
+import com.amazonaws.services.dynamodbv2.model._
 
-  /** Generator for non-empty alpha strings of random length */
-  def nonEmptyAlphaStr: Gen[String] =
-   for(cs <- Gen.listOf1(Gen.alphaChar)) yield cs.mkString
+import AwsBijections._
 
-  /** Generator for Options of non-empty alpha strings of random length */
-  def nonEmptyAlphaStrOpt: Gen[Option[String]] =
-    nonEmptyAlphaStr.flatMap(str => Gen.oneOf(Some(str), None))
-
-  /** Generator for Options of postive long values */
-  def posLongOpt: Gen[Option[Long]] =
-    Gen.posNum[Long].flatMap(l => Gen.oneOf(Some(l), None))
+object DynamoStringStore {
+  def apply(awsAccessKey: String, awsSecretKey: String, tableName: String, primaryKeyColumn: String, valueColumn: String) =
+    new DynamoStringStore(DynamoStore(awsAccessKey, awsSecretKey, tableName, primaryKeyColumn, valueColumn))
 }
+
+class DynamoStringStore(underlying: DynamoStore)
+  extends ConvertedStore[String, String, AttributeValue, String](underlying)(identity)
