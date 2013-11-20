@@ -16,7 +16,7 @@
 
 package com.twitter.storehaus.zookeeper
 
-import com.twitter.util.Future
+import com.twitter.util.{ Duration, Future, Time, Timer }
 import com.twitter.storehaus.ReadableStore
 import com.twitter.zk.{ ZkClient, ZNode }
 import org.apache.zookeeper.data.Stat
@@ -26,11 +26,11 @@ import org.apache.zookeeper.data.Stat
  */
 
 object ExistenceStore {
-  def apply(client: ZkClient) =
-    new ExistenceStore(client)
+  def apply(client: ZkClient)(implicit timer: Timer) =
+    new ExistenceStore(client)(timer)
 }
 
-class ExistenceStore(val client: ZkClient)
+class ExistenceStore(val client: ZkClient)(implicit timer: Timer)
   extends ReadableStore[String, Stat] {
 
   override def get(k: String): Future[Option[Stat]] =
@@ -42,6 +42,7 @@ class ExistenceStore(val client: ZkClient)
       }
     }
 
-  override def close { client.release }
+  override def close(time: Time) =
+    client.release.within(Duration.fromMilliseconds(time.inMillis))
 }
 

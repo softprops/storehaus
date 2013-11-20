@@ -16,7 +16,7 @@
 
 package com.twitter.storehaus.zookeeper
 
-import com.twitter.util.Future
+import com.twitter.util.{ Duration, Future, Time, Timer }
 import com.twitter.storehaus.Store
 import com.twitter.zk.{ ZkClient, ZNode }
 import org.apache.zookeeper.data.Stat
@@ -26,11 +26,11 @@ import org.apache.zookeeper.data.Stat
  */
 
 object ChildrenStore {
-  def apply(client: ZkClient) =
-    new ChildrenStore(client)
+  def apply(client: ZkClient)(implicit timer: Timer) =
+    new ChildrenStore(client)(timer)
 }
 
-class ChildrenStore(val client: ZkClient)
+class ChildrenStore(val client: ZkClient)(implicit timer: Timer)
   extends Store[String, Seq[String]] {
 
   override def get(k: String): Future[Option[Seq[String]]] =
@@ -47,12 +47,16 @@ class ChildrenStore(val client: ZkClient)
     kv match {
       case (path, Some(children)) =>
         client(path).sync.flatMap {
-          _.exists().map(_(children))
+          _.exists().map(_(children).children.map({ node =>
+            println("creating node %s" format node)
+            node.create()
+          }))
         }.unit
       case (path, None) =>
         // TODO: how to delete children
         Future.value(Nil)
     }
 
-  override def close { client.release }
+  override def close(time: Time) =
+    client.release.within(Duration.fromMilliseconds(time.inMillis))
 }
