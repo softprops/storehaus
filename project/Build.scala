@@ -116,7 +116,7 @@ object StorehausBuild extends Build {
 
   val algebirdVersion = "0.3.0"
   val bijectionVersion = "0.5.4"
-  val utilVersion = "6.8.2"
+  val utilVersion = "6.8.1"
 
   lazy val storehaus = Project(
     id = "storehaus",
@@ -193,7 +193,7 @@ object StorehausBuild extends Build {
     name := "storehaus-zookeeper",
     previousArtifact := youngestForwardCompatible("zookeeper"),
     libraryDependencies +=
-      ("com.twitter" %% "util-zk" % utilVersion)
+      withCross("com.twitter" %% "util-zk" % utilVersion)
        .exclude("javax.jms", "jms")
        .exclude("com.sun.jdmk", "jmxtools")
        .exclude("com.sun.jmx", "jmxri")
