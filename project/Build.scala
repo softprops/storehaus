@@ -135,7 +135,8 @@ object StorehausBuild extends Build {
     storehausRedis,
     storehausHBase,
     storehausDynamoDB,
-    storehausTesting
+    storehausTesting,
+    storehausZookeeper
   )
 
   def module(name: String) = {
@@ -185,11 +186,7 @@ object StorehausBuild extends Build {
     parallelExecution in Test := false
   ).dependsOn(storehausAlgebra % "test->test;compile->compile")
 
-  lazy val storehausZookeeper = Project(
-    id = "storehaus-zookeeper",
-    base = file("storehaus-zookeeper"),
-    settings = sharedSettings
-  ).settings(
+  lazy val storehausZookeeper = module("zookeeper").settings(
     name := "storehaus-zookeeper",
     previousArtifact := youngestForwardCompatible("zookeeper"),
     libraryDependencies +=
